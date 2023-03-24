@@ -26,15 +26,15 @@ float vel;
 float curVel = 0.0;
 float accel;
 float lastAccel = 0.0;
-int det = 0;
-int det1 = 0;
+//int det = 0;
+//int det1 = 0;
 int timet = 100;
-bool detM = false;
-bool detS = false;
+bool detM = false;//detection movement
+//bool detS = false;//detection stop
 bool set = false;
 
 //Pins
-#define EVI 13
+#define EVI 13//timestamp 
 
 //timestamp subroutine
 void RTC()
@@ -57,22 +57,24 @@ void RTC()
 //reset function
 void(* resetFunc) (void) = 0; //declare reset function @ address 0
 //initialize
-void setFunc(){
- while (timet != 0) {
-        Serial.print("Z1: ");
-        Serial.print(myData.xData * 9.80665, 4);
-        Serial.println();
+void setFunc() {
+  //check if zero g offest records new data
+  while (timet != 0) {
+    kxAccel.getAccelData(&myData);//grab new acceleration data each rep
+    Serial.print("X1: ");
+    Serial.print(myData.xData * 9.80665, 4);//measured in g's then converted to m/s^2
+    Serial.println();
 
-        zOx = (myData.xData * 9.80665) + zOx;
-        timet --;
-      }
-      Serial.print("SET");
-      timet = 100;
-      set = true;
-      zO = (zOx) / 100;
-      Serial.print(zO);
-    }
-  
+    zOx = (myData.xData * 9.80665) + zOx;
+    timet --;
+  }
+  Serial.print("SET");
+  timet = 100;
+  set = true;
+  zO = (zOx) / 100;//zero g axis of x axis
+  Serial.print(zO);
+}
+
 }
 void setup()
 {
@@ -115,19 +117,20 @@ void loop()
   {
     kxAccel.getAccelData(&myData);
     if ( set == false) {
-     setFunc();//calculates the zerog offset
+      setFunc();//calculates the zerog offset
     }
   } else {
     //resetFunc();
+    Serial.print("data not ready");
   }
-  
+
   //constants calculations
   accel = (myData.xData * 9.80665) - zO;
-  vel =  /*lastVel +*/ ((accel - lastAccel)*0.1);//Possibly needs reworking
-  curVel = curVel + vel;//current velocity update
-  // detection from idle
+  vel =  /*lastVel +*/ ((accel /*- lastAccel)*/ * 0.1); //Possibly needs reworking - a*t
+                        curVel = curVel + vel;//current velocity update
+                        // detection from idle
   if (abs(curVel) >= 0.05 && detM == false) {//absolute value to account for positive and negative change
-    Serial.print("V:");
+  Serial.print("V:");
     Serial.print(curVel, 4);
     Serial.println();
     Serial.print(" A: ");
@@ -141,7 +144,7 @@ void loop()
     //insert print to SD code here
     detM = true;
   } else if (abs(curVel) < 0.04 && detM == true) {//sto detection, parameters need testing
-    Serial.print(" V: ");
+  Serial.print(" V: ");
     Serial.print(curVel, 4);
     Serial.println();
     Serial.print(" A: ");
@@ -160,16 +163,16 @@ void loop()
     //Serial.print(vel, 8);
     Serial.println();
     Serial.print("L A: ");
-   // Serial.print((accel), 4);
+    // Serial.print((accel), 4);
     Serial.print(" lA: ");
     //Serial.print((lastAccel), 4);
     Serial.println();
   }
   //sets last values
   lastVel = vel;
-  lastAccel = accel;
+            lastAccel = accel;
 
-  delay(100); // (Delay should be 1/ODR (Output Data Rate), default was 1/50ODR(adjusted)50hz) now is 10Hz
+            delay(100); // (Delay should be 1/ODR (Output Data Rate), default was 1/50ODR(adjusted)50hz) now is 10Hz
 
 
 
