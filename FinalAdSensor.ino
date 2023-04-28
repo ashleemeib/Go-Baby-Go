@@ -1,6 +1,6 @@
 
 //Go Baby Go Adherence Sensor Master Code
-//Written by Ashlee B, Kyler M, Tara P
+//Written by Ashlee B, Kyler M, Tara P 4/26/23
 //
 //Components:
 //Accelerometer- reading implemented
@@ -30,7 +30,7 @@ const float gravity = 9.80665;  // earth's gravity in m/s^2
 
 float accel;
 int detect = 0;
-int timeBlink = 0;
+float timeBlink = 0;
 bool det = false;
 float last_x;
 float last_y;
@@ -85,9 +85,9 @@ void accelRead() {
   //Moving Average Filter- Take average of 50 samples for each axis
   for (int i = 0; i < 50; i++) {
     lis.getEvent(&event);
-    x_sum += event.acceleration.x;
+    x_sum += (-event.acceleration.z);
     y_sum += event.acceleration.y;
-    z_sum += event.acceleration.z;
+    z_sum += (-event.acceleration.x);
     delay(2);
   }
 
@@ -115,7 +115,7 @@ void sd_Start() {//prints to sd card starting
   }
 
 }
-void sd_Stop() {//printing to the SD card 
+void sd_Stop() {//printing to the SD card
 
   String stopTime = RTC(); //timestamp
   Serial.println();
@@ -167,17 +167,16 @@ void setup()
   // Check if SD is connected correctly
   if (!SD.begin()) {
     Serial.println("Card Mount Failed");
+    //   digitalWrite(LED, HIGH);
+    // while (1) { }
     return;
   }
   uint8_t cardType = SD.cardType();
 
   if (cardType == CARD_NONE) {
     Serial.println("No SD card attached");
-    while (1) {
-      digitalWrite(LED,HIGH);
-      delay(20);
-      digitalWrite(LED,LOW);
-    }
+    // digitalWrite(LED, HIGH);
+    //while (1) { }
     return;
   }
 
@@ -194,28 +193,43 @@ void setup()
   else {
     Serial.println("UNKNOWN");
   }
-
-
-  
-
-
+  //axis zeroing to eliminate false positives
+  x = 0;
+  y = 0;
+  z = 0;
+  //
+  String startTime = RTC(); //timestamp
+  Serial.println();
+  File file = SD.open("/accelerationdata.txt", FILE_APPEND); //open file.txt to write data
+  if (!file) {
+    Serial.println("Could not open file(writing).");
+  }
+  else {
+    file.println();
+    file.print("Device start up at: ");
+    file.print(startTime);
+    file.println();
+    file.close();
+  }
 }
 
 void loop() {
+  //reset values before reading, eliminates false positives
   //blink timer
-  if (timeBlink == 100){
-    //turn on LED for to indicate device is on
-  digitalWrite(LED, HIGH);
-  delay(20);
-   digitalWrite(LED, LOW);
-   timeBlink = 0;
-  } else {
-    timeBlink += 1;
-  }
+  /* if (timeBlink <= 100) {
+     timeBlink += 0.1;
+    } else {
+     //turn on LED for to indicate device is on
+     digitalWrite(LED, HIGH);
+     delay(50);
+     digitalWrite(LED, LOW);
+     timeBlink = 0;
+    }*/
   // Accelerometer
   // Uses a delta scheme to detect movement
   accelRead();
   Serial.println(x);
+
   // If there is a significant delta, time stamp and record data to SD card
   if ( abs(last_x - x) > move_tholdX &&
        abs(last_y - y) > move_tholdY &&
@@ -230,7 +244,7 @@ void loop() {
              move_tholdY > abs(last_y - y) &&
              move_tholdY > abs(last_z - z) && detect < 3 && det == true) {
     detect += 1;
-    
+
   } else if (move_tholdX > abs(last_x - x) &&
              move_tholdY > abs(last_y - y) &&
              move_tholdY > abs(last_z - z) && detect == 3 && det == true) {
@@ -241,7 +255,7 @@ void loop() {
     sd_Stop();
     det = false;
     detect = 0;
-  } else {//if the data goes above the thresholds over reset detect counter 
+  } else {//if the data goes above the thresholds over reset detect counter
     detect = 0;
   }
   // Give time between readings
